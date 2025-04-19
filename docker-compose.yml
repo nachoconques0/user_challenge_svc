@@ -1,0 +1,18 @@
+version: "3"
+services:
+  database:
+    image: postgres:15.2-alpine
+    container_name: user_challenge_db
+    ports:
+      - "127.0.0.1:5434:5432"
+    environment:
+      POSTGRES_USER: user_challenge_svc
+      POSTGRES_PASSWORD: user_challenge_svc
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: user_challenge_svc
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_challenge_svc -d user_challenge_svc"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always

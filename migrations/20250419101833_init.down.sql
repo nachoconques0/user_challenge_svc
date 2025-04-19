@@ -1,0 +1,5 @@
+BEGIN;
+
+	DROP SCHEMA challenge CASCADE;
+
+COMMIT;

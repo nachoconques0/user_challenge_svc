@@ -1,0 +1,6 @@
+vendor/
+tmp/
+.gocfg/
+.gopath/
+coverage/
+reports/

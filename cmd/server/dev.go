@@ -11,6 +11,7 @@ import (
 
 func init() {
 	os.Setenv("HTTP_PORT", "8090")
+	os.Setenv("GRPC_PORT", "6000")
 	os.Setenv("GIN_MODE", gin.DebugMode)
 	os.Setenv("DB_HOST", "127.0.0.1")
 	os.Setenv("DB_PORT", "5434")

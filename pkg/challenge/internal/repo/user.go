@@ -7,7 +7,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/entity"
+	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/entity/user"
+
 	"gorm.io/gorm/clause"
 )
 
@@ -25,7 +26,7 @@ var (
 )
 
 // Create creates a new user in the DB
-func Create(u *entity.User, tx *gorm.DB) (*entity.User, error) {
+func Create(u *user.Entity, tx *gorm.DB) (*user.Entity, error) {
 	if tx == nil {
 		return nil, ErrMissingDB
 	}
@@ -43,9 +44,9 @@ func Create(u *entity.User, tx *gorm.DB) (*entity.User, error) {
 }
 
 // Find returns a list of users. It can be paginated and filtered by user country
-func Find(tx *gorm.DB, country string, page, limit int) ([]entity.User, error) {
-	var users []entity.User
-	query := tx.Model(&entity.User{})
+func Find(tx *gorm.DB, country string, page, limit int) ([]user.Entity, error) {
+	var users []user.Entity
+	query := tx.Model(&user.Entity{})
 
 	if tx == nil {
 		return nil, ErrMissingDB
@@ -68,8 +69,8 @@ func Find(tx *gorm.DB, country string, page, limit int) ([]entity.User, error) {
 }
 
 // GetUserForUpdate returns an user and will lock the row in order to update it
-func GetUserForUpdate(id uuid.UUID, tx *gorm.DB) (*entity.User, error) {
-	var u entity.User
+func GetUserForUpdate(id uuid.UUID, tx *gorm.DB) (*user.Entity, error) {
+	var u user.Entity
 	if tx == nil {
 		return nil, ErrMissingDB
 	}
@@ -77,7 +78,7 @@ func GetUserForUpdate(id uuid.UUID, tx *gorm.DB) (*entity.User, error) {
 		return nil, ErrIDShouldNotBeEmpty
 	}
 
-	if res := tx.Where(entity.User{ID: id}).
+	if res := tx.Where(user.Entity{ID: id}).
 		Clauses(clause.Locking{Strength: "UPDATE"}).
 		First(&u); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
@@ -89,7 +90,7 @@ func GetUserForUpdate(id uuid.UUID, tx *gorm.DB) (*entity.User, error) {
 }
 
 // Update updates only the nickname of an existing user
-func Update(u *entity.User, tx *gorm.DB) (*entity.User, error) {
+func Update(u *user.Entity, tx *gorm.DB) (*user.Entity, error) {
 	if tx == nil {
 		return nil, ErrMissingDB
 	}
@@ -100,10 +101,10 @@ func Update(u *entity.User, tx *gorm.DB) (*entity.User, error) {
 		return nil, errors.New("nickname cannot be empty")
 	}
 
-	if err := tx.Model(&entity.User{}).
+	if err := tx.Model(&user.Entity{}).
 		Where("id = ?", u.ID).
 		Select("nickname").
-		Updates(&entity.User{
+		Updates(&user.Entity{
 			Nickname: u.Nickname,
 		}).Error; err != nil {
 		return nil, err
@@ -121,7 +122,7 @@ func Delete(id uuid.UUID, tx *gorm.DB) error {
 		return ErrIDShouldNotBeEmpty
 	}
 
-	if err := tx.Delete(&entity.User{}, "id = ?", id).Error; err != nil {
+	if err := tx.Delete(&user.Entity{}, "id = ?", id).Error; err != nil {
 		return err
 	}
 	return nil

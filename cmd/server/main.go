@@ -20,6 +20,7 @@ func main() {
 	options := []app.Option{
 		// HTTP Options
 		app.WithHTTPPort(env.LoadOrPanic("HTTP_PORT")),
+		app.WithGRPCPort(env.LoadOrPanic("GRPC_PORT")),
 		// DB Options
 		app.WithDBHost(env.LoadOrPanic("DB_HOST")),
 		app.WithDBPort(env.LoadOrPanic("DB_PORT")),

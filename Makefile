@@ -16,6 +16,10 @@ mod:
 run: ; $(info Starting svc...)
 	go run --tags dev ./cmd/server/.
 
+.PHONY: lint
+lint:
+	@golangci-lint run ./...
+	
 .PHONY: migration-create
 migration-create: ## Creates a new migration usage: `migration-create name=<migration name>`
 	@migrate create -dir ./migrations -ext sql $(name)
@@ -54,3 +58,13 @@ test: ; $(info running tests…) @
 ## Generate mock files. Usage: 'make mock'
 mock: ; $(info Generating mock files)
 	@./generate-mocks.sh
+
+.PHONY: user-proto
+user-proto:
+	@echo "Generating gRPC code from proto..."
+	protoc \
+		--go_out=. \
+		--go-grpc_out=. \
+		--go_opt=paths=source_relative \
+		--go-grpc_opt=paths=source_relative \
+		pkg/challenge/proto/user/user.proto

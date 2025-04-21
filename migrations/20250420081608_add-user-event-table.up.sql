@@ -1,0 +1,12 @@
+BEGIN;
+
+CREATE TABLE challenge.user_event (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  event_type TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  published BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMIT;

@@ -1,16 +1,15 @@
-package entity_test
+package user_test
 
 import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/entity/user"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/entity"
 )
 
-func TestEntity_Valid(t *testing.T) {
-	validUser := &entity.User{
+func TestUserEntity_Valid(t *testing.T) {
+	validUser := &user.Entity{
 		ID:        uuid.New(),
 		FirstName: "Nacho",
 		LastName:  "Calcagno",
@@ -26,57 +25,57 @@ func TestEntity_Valid(t *testing.T) {
 	})
 
 	t.Run("should fail with empty first name", func(t *testing.T) {
-		user := *validUser
-		user.FirstName = ""
-		err := user.Valid()
-		assert.ErrorIs(t, err, entity.ErrEmptyField)
+		u := *validUser
+		u.FirstName = ""
+		err := u.Valid()
+		assert.ErrorIs(t, err, user.ErrEmptyField)
 	})
 
 	t.Run("should fail with empty last name", func(t *testing.T) {
-		user := *validUser
-		user.LastName = "   "
-		err := user.Valid()
-		assert.ErrorIs(t, err, entity.ErrEmptyField)
+		u := *validUser
+		u.LastName = "   "
+		err := u.Valid()
+		assert.ErrorIs(t, err, user.ErrEmptyField)
 	})
 
 	t.Run("should fail with empty nickname", func(t *testing.T) {
-		user := *validUser
-		user.Nickname = ""
-		err := user.Valid()
-		assert.ErrorIs(t, err, entity.ErrEmptyField)
+		u := *validUser
+		u.Nickname = ""
+		err := u.Valid()
+		assert.ErrorIs(t, err, user.ErrEmptyField)
 	})
 
 	t.Run("should fail with short password", func(t *testing.T) {
-		user := *validUser
-		user.Password = "123"
-		err := user.Valid()
-		assert.ErrorIs(t, err, entity.ErrWeakPassword)
+		u := *validUser
+		u.Password = "123"
+		err := u.Valid()
+		assert.ErrorIs(t, err, user.ErrWeakPassword)
 	})
 
 	t.Run("should fail with empty email", func(t *testing.T) {
-		user := *validUser
-		user.Email = ""
-		err := user.Valid()
-		assert.ErrorIs(t, err, entity.ErrEmptyField)
+		u := *validUser
+		u.Email = ""
+		err := u.Valid()
+		assert.ErrorIs(t, err, user.ErrEmptyField)
 	})
 
 	t.Run("should fail with invalid email format", func(t *testing.T) {
-		user := *validUser
-		user.Email = "invalid-email"
-		err := user.Valid()
-		assert.ErrorIs(t, err, entity.ErrInvalidEmail)
+		u := *validUser
+		u.Email = "invalid-email"
+		err := u.Valid()
+		assert.ErrorIs(t, err, user.ErrInvalidEmail)
 	})
 
 	t.Run("should fail with empty country", func(t *testing.T) {
-		user := *validUser
-		user.Country = "  "
-		err := user.Valid()
-		assert.ErrorIs(t, err, entity.ErrInvalidCountry)
+		u := *validUser
+		u.Country = "  "
+		err := u.Valid()
+		assert.ErrorIs(t, err, user.ErrInvalidCountry)
 	})
 }
 
 func TestEntity_HashPassword(t *testing.T) {
-	user := &entity.User{
+	user := &user.Entity{
 		Password: "supersecure",
 	}
 

@@ -7,15 +7,24 @@ type Options struct {
 	dbOptions []db.Option
 	// HTTP server configuration
 	httpPort string
+	// gRPC server configuration
+	gRPCPort string
 }
 
 // Option type to add dependencies to the given Options
 type Option func(*Options)
 
-// WithHTTPPort rest server port
+// WithHTTPPort http server port
 func WithHTTPPort(p string) Option {
 	return func(o *Options) {
 		o.httpPort = p
+	}
+}
+
+// WithGRPCPort gRPC server port
+func WithGRPCPort(p string) Option {
+	return func(o *Options) {
+		o.gRPCPort = p
 	}
 }
 

@@ -1,3 +1,7 @@
+echo "🔄 Generating mocks..."
 
-mockgen --source=internal/coupon/coupon.go --destination=internal/mocks/mock_coupon.go --package=mocks --mock_names=Repository=MockCouponRepository,Service=MockCouponService,Server=MockCouponServer
-mockgen --source=internal/shopping_cart/shopping_cart.go --destination=internal/mocks/mock_shopping_cart.go --package=mocks --mock_names=Repository=MockShoppingCartRepository,Service=MockShoppingCartService,Server=MockShoppingCartServer
+mockgen --source=pkg/challenge/internal/aggregate/user/user.go --destination=pkg/challenge/internal/mocks/mock_user_aggregate.go --package=mocks --mock_names=Aggregate=MockUserAggregate
+mockgen --source=pkg/challenge/internal/service/user/service.go --destination=pkg/challenge/internal/mocks/mock_user_service.go --package=mocks --mock_names=Service=MockUserService
+mockgen --source=pkg/challenge/pubsub/publisher.go --destination=pkg/challenge/internal/mocks/mock_publisher.go --package=mocks --mock_names=Publisher=MockPublisher
+
+echo "✅ Mocks generated!"

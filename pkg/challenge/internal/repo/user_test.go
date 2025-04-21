@@ -4,18 +4,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/helpers"
-	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/entity"
-	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/repo"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+
+	"github.com/google/uuid"
+	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/helpers"
+	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/entity/user"
+	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/repo"
 )
 
 var (
-	password = "faceit123"
-	user     = entity.User{
+	password  = "faceit123"
+	validUser = user.Entity{
 		FirstName: "nacho",
 		LastName:  "calcagno",
 		Nickname:  "faceitcsgo",
@@ -33,15 +34,15 @@ func TestRepository_Create(t *testing.T) {
 	defer teardown()
 
 	t.Run("it should create an user", func(t *testing.T) {
-		res, err := repo.Create(&user, db)
+		res, err := repo.Create(&validUser, db)
 		assert.Nil(t, err)
-		assert.Equal(t, user.ID, res.ID)
-		assert.Equal(t, user.FirstName, res.FirstName)
-		assert.Equal(t, user.LastName, res.LastName)
-		assert.Equal(t, user.Nickname, res.Nickname)
-		assert.Equal(t, user.LastName, res.LastName)
-		assert.Equal(t, user.Email, res.Email)
-		assert.Equal(t, user.Country, res.Country)
+		assert.Equal(t, validUser.ID, res.ID)
+		assert.Equal(t, validUser.FirstName, res.FirstName)
+		assert.Equal(t, validUser.LastName, res.LastName)
+		assert.Equal(t, validUser.Nickname, res.Nickname)
+		assert.Equal(t, validUser.LastName, res.LastName)
+		assert.Equal(t, validUser.Email, res.Email)
+		assert.Equal(t, validUser.Country, res.Country)
 		assert.NotEqual(t, res.CreatedAt, time.Time{})
 		assert.NotEqual(t, res.UpdatedAt, time.Time{})
 		t.Run("and user password encrypted", func(t *testing.T) {
@@ -51,7 +52,7 @@ func TestRepository_Create(t *testing.T) {
 	})
 
 	t.Run("it should fail if the user already exists", func(t *testing.T) {
-		_, err = repo.Create(&user, db)
+		_, err = repo.Create(&validUser, db)
 		assert.NotNil(t, err)
 	})
 }
@@ -116,7 +117,7 @@ func TestRepository_GetUserForUpdate(t *testing.T) {
 	})
 
 	t.Run("should return user", func(t *testing.T) {
-		user := &entity.User{
+		user := &user.Entity{
 			FirstName: "Test",
 			LastName:  "User",
 			Nickname:  "TU123",
@@ -141,7 +142,7 @@ func TestRepository_Update(t *testing.T) {
 	defer teardown()
 
 	t.Run("should update nickname", func(t *testing.T) {
-		user := &entity.User{
+		user := &user.Entity{
 			FirstName: "nacho",
 			LastName:  "calcagno",
 			Nickname:  "nachin",
@@ -164,7 +165,7 @@ func TestRepository_Update(t *testing.T) {
 	})
 
 	t.Run("should return error if tx is nil", func(t *testing.T) {
-		user := &entity.User{
+		user := &user.Entity{
 			ID:       uuid.New(),
 			Nickname: "nacho",
 		}
@@ -180,7 +181,7 @@ func TestRepository_Update(t *testing.T) {
 	})
 
 	t.Run("should return error if user ID is nil", func(t *testing.T) {
-		user := &entity.User{
+		user := &user.Entity{
 			ID:       uuid.Nil,
 			Nickname: "nacho",
 		}
@@ -190,7 +191,7 @@ func TestRepository_Update(t *testing.T) {
 	})
 
 	t.Run("should return error if nickname is empty", func(t *testing.T) {
-		user := &entity.User{
+		user := &user.Entity{
 			ID:       uuid.New(),
 			Nickname: "   ",
 		}
@@ -209,7 +210,7 @@ func TestRepository_Delete(t *testing.T) {
 	defer teardown()
 
 	t.Run("should delete an user", func(t *testing.T) {
-		user := &entity.User{
+		user := &user.Entity{
 			FirstName: "Soft",
 			LastName:  "Delete",
 			Nickname:  "softie",
@@ -247,7 +248,7 @@ func TestRepository_Delete(t *testing.T) {
 }
 
 func insertTestUsers(t *testing.T, db *gorm.DB) {
-	users := []entity.User{
+	users := []user.Entity{
 		{
 			FirstName: "Nacho1",
 			LastName:  "faceit1",

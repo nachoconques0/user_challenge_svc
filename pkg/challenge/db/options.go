@@ -61,9 +61,9 @@ func WithPassword(p string) Option {
 }
 
 // WithMaxConnections sets a limit on the maximum number of open connections
-func WithMaxConnections(max int) Option {
+func WithMaxConnections(maxC int) Option {
 	return func(o *Options) {
-		o.MaxConnections = max
+		o.MaxConnections = maxC
 	}
 }
 

@@ -1,4 +1,4 @@
-package entity
+package user
 
 import (
 	"errors"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 var (
@@ -23,8 +24,8 @@ const (
 	TableName = "challenge.user"
 )
 
-// User entity representation in DB
-type User struct {
+// Entity represents user in DB
+type Entity struct {
 	ID        uuid.UUID `gorm:"type:uuid;primary_key"`
 	FirstName string    `gorm:"not null"`
 	LastName  string    `gorm:"not null"`
@@ -34,15 +35,15 @@ type User struct {
 	Country   string    `gorm:"not null"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt time.Time
+	DeletedAt gorm.DeletedAt
 }
 
 // TableName returns table name
-func (User) TableName() string {
+func (Entity) TableName() string {
 	return TableName
 }
 
-func (u *User) HashPassword(password string) error {
+func (u *Entity) HashPassword(password string) error {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -52,7 +53,7 @@ func (u *User) HashPassword(password string) error {
 }
 
 // Valid checks that the entity meets the criteria for being persisted
-func (u *User) Valid() error {
+func (u *Entity) Valid() error {
 	if strings.TrimSpace(u.FirstName) == "" {
 		return fmt.Errorf("first name: %w", ErrEmptyField)
 	}

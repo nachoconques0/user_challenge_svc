@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/server/http/middleware"
 	"github.com/rs/zerolog/log"
 )
 
@@ -25,7 +26,7 @@ type server struct {
 }
 
 // New Initialize a new HTTP server with gin framework
-func New(opts ...Option) (*server, error) {
+func New(opts ...Option) (*server, error) { //nolint:revive // no need to return Server because we need is the struct not the interface
 	// Init and apply options
 	options := Options{
 		Context: context.Background(),
@@ -42,6 +43,10 @@ func New(opts ...Option) (*server, error) {
 
 	// Initialize the server
 	router := gin.New()
+
+	// Add middlewares
+	router.Use(middleware.TraceIDMiddleware())
+
 	s := server{
 		opts:   options,
 		router: router,
@@ -73,7 +78,7 @@ func (s server) Address() string {
 // Run Runs the server and starts listening to HTTP requests
 // This method will block the calling go routine indefinitely unless an error happens
 func (s server) Run() error {
-	log.Info().Msg(fmt.Sprintf("HTTP server: starting at %s\n", s.Address()))
+	log.Info().Msg(fmt.Sprintf("HTTP server listening on :%s", s.Address()))
 	return s.server.ListenAndServe()
 }
 

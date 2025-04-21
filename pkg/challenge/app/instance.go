@@ -10,17 +10,21 @@ import (
 	"syscall"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/rs/zerolog/log"
 
-	userAggregate "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/aggregate/user"
-	userController "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/controller/http/user"
-	userService "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/service"
-	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/server"
-
 	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/db"
+	userAggregate "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/aggregate/user"
+	userGrpcController "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/controller/grpc/user"
+	userController "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/controller/http/user"
+	userService "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/service/user"
+	userProto "github.com/nachoconques0/user_challenge_svc/pkg/challenge/proto/user"
+	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/pubsub"
+	grpcServer "github.com/nachoconques0/user_challenge_svc/pkg/challenge/server/grpc"
+	httpServer "github.com/nachoconques0/user_challenge_svc/pkg/challenge/server/http"
 )
 
-// Possible service states
 const (
 	serviceNEW = iota
 	serviceRUNNING
@@ -28,12 +32,16 @@ const (
 	serviceSTOPPED
 )
 
-// Instance definitions
 type Instance struct {
-	servers []server.Server
+	servers []server
 	timeout int
 	state   int
 	mu      sync.Mutex
+}
+
+type server interface {
+	Run() error
+	Stop(context.Context) error
 }
 
 func New(opts ...Option) error {
@@ -42,130 +50,123 @@ func New(opts ...Option) error {
 		o(&options)
 	}
 
-	// Initialize DB
-	db, err := db.New(options.dbOptions...)
+	dbConn, err := setupDatabase(options)
 	if err != nil {
 		return err
 	}
 
-	// Initialize Aggregate
-	userAgg, err := userAggregate.New(db, "nontest")
+	userSvc, err := setupUserService(dbConn)
 	if err != nil {
 		return err
 	}
 
-	// Initialize Service
-	userSvc := userService.New(userAgg)
-
-	// Initialize Controllers
-	userCtrl := userController.NewController(userSvc)
-
-	// Initialize HTTP server
-	httpServer, err := server.New(
-		server.WithAddress(fmt.Sprintf(":%s", options.httpPort)),
-	)
+	httpSrv, err := setupHTTPServer(userSvc, options.httpPort)
 	if err != nil {
 		return err
 	}
 
-	httpRouter := server.InitHTTPRouter(httpServer)
-	server.InitUserRoutes(httpRouter, userCtrl)
+	grpcSrv, err := setupGRPCServer(userSvc, options.gRPCPort)
+	if err != nil {
+		return err
+	}
 
 	i := Instance{
 		timeout: 20,
-		servers: []server.Server{
-			httpServer,
-		},
+		servers: []server{httpSrv, grpcSrv},
 	}
 
-	quitCh := make(chan os.Signal, 1)
-	signal.Notify(quitCh, syscall.SIGTERM, os.Interrupt)
-	defer signal.Stop(quitCh)
-
-	return i.Run(quitCh)
+	sigCh := waitForShutdownSignal()
+	return i.Run(sigCh)
 }
 
-// Run the service until SIGTERM signal is received. If any failure occurs on Run it will return an error.
-// If the application is already running nothing will happen
-func (s *Instance) Run(quitCh chan os.Signal) error {
-	// If the service was already stopped we cannot start it again
+func setupDatabase(opts Options) (*gorm.DB, error) {
+	return db.New(opts.dbOptions...)
+}
+
+func setupUserService(db *gorm.DB) (userService.Service, error) {
+	publisher := pubsub.NewLoggerPublisher(db)
+	userAgg, err := userAggregate.New(db, "nontest", publisher)
+	if err != nil {
+		return nil, err
+	}
+	return userService.New(userAgg), nil
+}
+
+func setupHTTPServer(svc userService.Service, port string) (server, error) {
+	srv, err := httpServer.New(httpServer.WithAddress(fmt.Sprintf(":%s", port)))
+	if err != nil {
+		return nil, err
+	}
+	router := httpServer.InitHTTPRouter(srv)
+	httpServer.InitUserRoutes(router, userController.NewController(svc))
+	return srv, nil
+}
+
+func setupGRPCServer(svc userService.Service, port string) (server, error) {
+	srv := grpcServer.New(port)
+	userProto.RegisterUserServiceServer(srv.Server(), userGrpcController.NewController(svc))
+	return srv, nil
+}
+
+func waitForShutdownSignal() chan os.Signal {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
+	return quit
+}
+
+func (s *Instance) Run(quit chan os.Signal) error {
 	if s.isStopped() {
 		return errors.New("instance was already stopped. Can't start it again")
 	}
 
-	// Only run if service is new
 	if s.isNew() {
 		log.Info().Msg("Application: starting...")
 
-		// Lock the instance while it is being started
 		s.mu.Lock()
 		s.state = serviceRUNNING
-
-		// Handle startup errors
 		errCh := make(chan error, 1)
-
-		// Look at SIGTERM system event
-		if quitCh == nil {
-			quitCh = make(chan os.Signal, 1)
-			signal.Notify(quitCh, syscall.SIGTERM, os.Interrupt)
-			defer signal.Stop(quitCh)
-		}
-
-		// Run registered servers
 		s.runServers(errCh)
-
 		s.mu.Unlock()
 
 		log.Info().Msg("Application: running...")
 
-		// Block waiting for shutdown
 		select {
 		case err := <-errCh:
 			return err
-		case <-quitCh:
+		case <-quit:
 			s.mu.Lock()
 			s.state = serviceSTOPPING
 			s.mu.Unlock()
 
-			// Start context with cancellation set for the defined timeout
-			log.Info().Msg(fmt.Sprintf("Application: stopping in %.0fs...\n", s.Timeout().Seconds()))
+			log.Info().Msgf("Application: stopping in %.0fs...", s.Timeout().Seconds())
 			ctx, cancel := context.WithTimeout(context.Background(), s.Timeout())
 			defer cancel()
-
-			// Stop servers and subscribers
 			go s.stopServers(ctx)
-
 			<-ctx.Done()
+
 			s.mu.Lock()
 			s.state = serviceSTOPPED
 			s.mu.Unlock()
 			log.Info().Msg("Application: stopped")
 		}
 	}
-
 	return nil
 }
 
-// Run all the registered servers
 func (s *Instance) runServers(errCh chan error) {
-	for _, srvr := range s.servers {
-		go func(server server.Server, ch chan error) {
-			if err := server.Run(); err != nil {
+	for _, srv := range s.servers {
+		go func(s server, ch chan error) {
+			if err := s.Run(); err != nil {
 				ch <- err
 			}
-		}(srvr, errCh)
+		}(srv, errCh)
 	}
 }
 
 func (s *Instance) stopServers(ctx context.Context) {
-	for _, server := range s.servers {
-		_ = server.Stop(ctx)
+	for _, srv := range s.servers {
+		_ = srv.Stop(ctx)
 	}
-
-}
-
-func (s *Instance) IsRunning() bool {
-	return s.state == serviceRUNNING || s.state == serviceSTOPPING
 }
 
 func (s *Instance) Timeout() time.Duration {
@@ -175,7 +176,6 @@ func (s *Instance) Timeout() time.Duration {
 func (s *Instance) isStopped() bool {
 	return s.state == serviceSTOPPED
 }
-
 func (s *Instance) isNew() bool {
 	return s.state == serviceNEW
 }

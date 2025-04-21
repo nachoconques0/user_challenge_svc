@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/nachoconques0/user_challenge_svc/pkg/proto/user.proto";
+
+service UserService {
+  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+  rpc UpdateUser (UpdateUserRequest) returns (UserResponse);
+  rpc DeleteUser (DeleteUserRequest) returns (Empty);
+  rpc FindUsers (FindUsersRequest) returns (UsersResponse);
+}
+
+message CreateUserRequest {
+  string first_name = 1;
+  string last_name = 2;
+  string nickname = 3;
+  string password = 4;
+  string email = 5;
+  string country = 6;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  string nickname = 2;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+
+message FindUsersRequest {
+  string country = 1;
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message UserResponse {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string nickname = 4;
+  string email = 5;
+  string country = 6;
+}
+
+message UsersResponse {
+  repeated UserResponse users = 1;
+}
+
+message Empty {}

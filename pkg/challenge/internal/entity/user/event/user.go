@@ -30,3 +30,21 @@ type User struct {
 func (User) TableName() string {
 	return "challenge.user_event"
 }
+
+type CreatedPayload struct {
+	UserID   string `json:"user_id"`
+	Email    string `json:"email"`
+	Nickname string `json:"nickname"`
+	TraceID  string `json:"trace_id"`
+}
+
+type UpdatedPayload struct {
+	UserID   string `json:"user_id"`
+	Nickname string `json:"nickname"`
+	TraceID  string `json:"trace_id"`
+}
+
+type DeletedPayload struct {
+	UserID  string `json:"user_id"`
+	TraceID string `json:"trace_id"`
+}

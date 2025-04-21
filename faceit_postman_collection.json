@@ -1,0 +1,106 @@
+{
+	"info": {
+		"_postman_id": "9f1c0e32-74db-401b-b6b9-3548c7d0fabc",
+		"name": "Faceit",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "5221820"
+	},
+	"item": [
+		{
+			"name": "Health check",
+			"item": [
+				{
+					"name": "localhost:8090/health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "localhost:8090/health"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Find Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:8090/users?limit=3&page=1&country=UK",
+							"host": [
+								"localhost"
+							],
+							"port": "8090",
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "3"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "country",
+									"value": "UK"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n \"first_name\": \"nachofromUK3\",\n \"last_name\":\"calcagno\",\n \"nickname\": \"nacho\",\n \"password\":\"123123123\",\n \"email\":\"nachofromUK3@gmail.com\",\n \"country\":\"UK\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "localhost:8090/users"
+					},
+					"response": []
+				},
+				{
+					"name": "Update user",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n \"nickname\": \"nachofromtheUKUpdated\",\n \"first_name\":\"cambiodefirstname?\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "localhost:8090/users/e3268eda-8d23-4300-87f6-406ef287c8e0"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete user",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "localhost:8090/users/0735d3be-9e32-4e9b-9947-a8d13377769c"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

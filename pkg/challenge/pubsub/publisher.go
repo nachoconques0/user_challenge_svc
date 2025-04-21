@@ -1,11 +1,7 @@
 package pubsub
 
-import (
-	"context"
-
-	"github.com/google/uuid"
-)
+import "context"
 
 type Publisher interface {
-	Emit(ctx context.Context, eventID uuid.UUID, eventType string, payload interface{}) error
+	Publish(ctx context.Context, eventID string, eventType string, payload interface{}) error
 }

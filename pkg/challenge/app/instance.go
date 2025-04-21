@@ -10,17 +10,16 @@ import (
 	"syscall"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/db"
 	userAggregate "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/aggregate/user"
-	userGrpcController "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/controller/grpc/user"
-	userController "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/controller/http/user"
+	grpcUserCtrl "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/controller/grpc/user"
+	httpUserCtrl "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/controller/http/user"
+	pubsubUserCtrl "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/controller/pubsub/user"
 	userService "github.com/nachoconques0/user_challenge_svc/pkg/challenge/internal/service/user"
 	userProto "github.com/nachoconques0/user_challenge_svc/pkg/challenge/proto/user"
-	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/pubsub"
+	simplePubSub "github.com/nachoconques0/user_challenge_svc/pkg/challenge/pubsub/local"
 	grpcServer "github.com/nachoconques0/user_challenge_svc/pkg/challenge/server/grpc"
 	httpServer "github.com/nachoconques0/user_challenge_svc/pkg/challenge/server/http"
 )
@@ -50,68 +49,56 @@ func New(opts ...Option) error {
 		o(&options)
 	}
 
-	dbConn, err := setupDatabase(options)
+	// DB connection
+	dbConn, err := db.New(options.dbOptions...)
 	if err != nil {
 		return err
 	}
 
-	userSvc, err := setupUserService(dbConn)
+	// Initialize Bus
+	bus := simplePubSub.NewBus(dbConn)
+
+	// Register Subscribers
+	err = pubsubUserCtrl.RegisterUserSubscribers(bus)
 	if err != nil {
 		return err
 	}
 
-	httpSrv, err := setupHTTPServer(userSvc, options.httpPort)
+	// Aggregate
+	userAgg, err := userAggregate.New(dbConn, "nontest", bus)
 	if err != nil {
 		return err
 	}
 
-	grpcSrv, err := setupGRPCServer(userSvc, options.gRPCPort)
+	// Service
+	userSvc := userService.New(userAgg)
+
+	// Controller
+	httpCtrl := httpUserCtrl.NewController(userSvc)
+	grpcCtrl := grpcUserCtrl.NewController(userSvc)
+
+	// HTTP Server
+	httpSrv, err := httpServer.New(httpServer.WithAddress(fmt.Sprintf(":%s", options.httpPort)))
 	if err != nil {
 		return err
 	}
+	httpRouter := httpServer.InitHTTPRouter(httpSrv)
+	httpServer.InitUserRoutes(httpRouter, httpCtrl)
+
+	// gRPC Server
+	grpcSrv := grpcServer.New(options.gRPCPort)
+	userProto.RegisterUserServiceServer(grpcSrv.Server(), grpcCtrl)
 
 	i := Instance{
 		timeout: 20,
 		servers: []server{httpSrv, grpcSrv},
 	}
 
-	sigCh := waitForShutdownSignal()
-	return i.Run(sigCh)
-}
+	quitCh := make(chan os.Signal, 1)
+	signal.Notify(quitCh, syscall.SIGTERM, os.Interrupt)
+	defer signal.Stop(quitCh)
 
-func setupDatabase(opts Options) (*gorm.DB, error) {
-	return db.New(opts.dbOptions...)
-}
-
-func setupUserService(db *gorm.DB) (userService.Service, error) {
-	publisher := pubsub.NewLoggerPublisher(db)
-	userAgg, err := userAggregate.New(db, "nontest", publisher)
-	if err != nil {
-		return nil, err
-	}
-	return userService.New(userAgg), nil
-}
-
-func setupHTTPServer(svc userService.Service, port string) (server, error) {
-	srv, err := httpServer.New(httpServer.WithAddress(fmt.Sprintf(":%s", port)))
-	if err != nil {
-		return nil, err
-	}
-	router := httpServer.InitHTTPRouter(srv)
-	httpServer.InitUserRoutes(router, userController.NewController(svc))
-	return srv, nil
-}
-
-func setupGRPCServer(svc userService.Service, port string) (server, error) {
-	srv := grpcServer.New(port)
-	userProto.RegisterUserServiceServer(srv.Server(), userGrpcController.NewController(svc))
-	return srv, nil
-}
-
-func waitForShutdownSignal() chan os.Signal {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
-	return quit
+	return i.Run(quitCh)
 }
 
 func (s *Instance) Run(quit chan os.Signal) error {
@@ -176,6 +163,7 @@ func (s *Instance) Timeout() time.Duration {
 func (s *Instance) isStopped() bool {
 	return s.state == serviceSTOPPED
 }
+
 func (s *Instance) isNew() bool {
 	return s.state == serviceNEW
 }

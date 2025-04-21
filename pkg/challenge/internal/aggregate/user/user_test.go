@@ -37,7 +37,7 @@ func TestUserAggregate_Create(t *testing.T) {
 		Country:   "VE",
 	}
 
-	mockPublisher.EXPECT().Emit(gomock.Any(), gomock.Any(), eventUser.UserCreated, gomock.Any()).Return(nil)
+	mockPublisher.EXPECT().Publish(gomock.Any(), gomock.Any(), eventUser.UserCreated, gomock.Any()).Return(nil)
 
 	created, err := aggregate.Create(ctx, input)
 	assert.NoError(t, err)
@@ -75,12 +75,12 @@ func TestUserAggregate_Update(t *testing.T) {
 		Country:   "AR",
 	}
 
-	mockPublisher.EXPECT().Emit(gomock.Any(), gomock.Any(), eventUser.UserCreated, gomock.Any()).Return(nil)
+	mockPublisher.EXPECT().Publish(gomock.Any(), gomock.Any(), eventUser.UserCreated, gomock.Any()).Return(nil)
 	created, err := agg.Create(ctx, user)
 	assert.NoError(t, err)
 
 	created.Nickname = "csgooo"
-	mockPublisher.EXPECT().Emit(gomock.Any(), gomock.Any(), eventUser.UserUpdated, gomock.Any()).Return(nil)
+	mockPublisher.EXPECT().Publish(gomock.Any(), gomock.Any(), eventUser.UserUpdated, gomock.Any()).Return(nil)
 
 	updated, err := agg.Update(ctx, created)
 	assert.NoError(t, err)
@@ -113,11 +113,11 @@ func TestUserAggregate_Delete(t *testing.T) {
 		Country:   "ES",
 	}
 
-	mockPublisher.EXPECT().Emit(gomock.Any(), gomock.Any(), eventUser.UserCreated, gomock.Any()).Return(nil)
+	mockPublisher.EXPECT().Publish(gomock.Any(), gomock.Any(), eventUser.UserCreated, gomock.Any()).Return(nil)
 	created, err := agg.Create(ctx, u)
 	assert.NoError(t, err)
 
-	mockPublisher.EXPECT().Emit(gomock.Any(), gomock.Any(), eventUser.UserSoftDeleted, gomock.Any()).Return(nil)
+	mockPublisher.EXPECT().Publish(gomock.Any(), gomock.Any(), eventUser.UserSoftDeleted, gomock.Any()).Return(nil)
 
 	err = agg.Delete(ctx, created.ID)
 	assert.NoError(t, err)

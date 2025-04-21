@@ -13,7 +13,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,16 +40,16 @@ func (m *MockPublisher) EXPECT() *MockPublisherMockRecorder {
 	return m.recorder
 }
 
-// Emit mocks base method.
-func (m *MockPublisher) Emit(ctx context.Context, eventID uuid.UUID, eventType string, payload any) error {
+// Publish mocks base method.
+func (m *MockPublisher) Publish(ctx context.Context, eventID, eventType string, payload any) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Emit", ctx, eventID, eventType, payload)
+	ret := m.ctrl.Call(m, "Publish", ctx, eventID, eventType, payload)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Emit indicates an expected call of Emit.
-func (mr *MockPublisherMockRecorder) Emit(ctx, eventID, eventType, payload any) *gomock.Call {
+// Publish indicates an expected call of Publish.
+func (mr *MockPublisherMockRecorder) Publish(ctx, eventID, eventType, payload any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Emit", reflect.TypeOf((*MockPublisher)(nil).Emit), ctx, eventID, eventType, payload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockPublisher)(nil).Publish), ctx, eventID, eventType, payload)
 }

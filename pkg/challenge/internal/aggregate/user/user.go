@@ -16,6 +16,8 @@ import (
 	"github.com/nachoconques0/user_challenge_svc/pkg/challenge/pubsub"
 )
 
+const traceID string = "trace_id"
+
 type aggregate struct {
 	DB        *gorm.DB
 	TestTx    bool
@@ -37,6 +39,8 @@ const (
 )
 
 // New returns a new User aggregate
+//
+//nolint:revive // no need to return agg because we need is the struct not the interface
 func New(db *gorm.DB, e string, pub pubsub.Publisher) (aggregate, error) {
 	a := aggregate{
 		DB:        db,
@@ -74,7 +78,14 @@ func (a aggregate) Create(ctx context.Context, u *user.Entity) (*user.Entity, er
 		return nil, err
 	}
 
-	_ = a.publisher.Emit(ctx, eventID, event.UserCreated, res)
+	payload := event.CreatedPayload{
+		UserID:   res.ID.String(),
+		Email:    res.Email,
+		Nickname: res.Nickname,
+		TraceID:  traceIDFromContext(ctx),
+	}
+
+	_ = a.publisher.Publish(ctx, eventID.String(), event.UserCreated, payload)
 	return res, nil
 }
 
@@ -99,11 +110,17 @@ func (a aggregate) Update(ctx context.Context, u *user.Entity) (*user.Entity, er
 		return nil, err
 	}
 
+	payload := event.UpdatedPayload{
+		UserID:   updated.ID.String(),
+		Nickname: updated.Nickname,
+		TraceID:  traceIDFromContext(ctx),
+	}
+
 	if err := a.commit(tx); err != nil {
 		return nil, err
 	}
 
-	_ = a.publisher.Emit(ctx, eventID, event.UserUpdated, updated)
+	_ = a.publisher.Publish(ctx, eventID.String(), event.UserUpdated, payload)
 	return updated, nil
 }
 
@@ -127,7 +144,12 @@ func (a aggregate) Delete(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 
-	_ = a.publisher.Emit(ctx, eventID, event.UserSoftDeleted, map[string]string{"user_id": id.String()})
+	payload := event.DeletedPayload{
+		UserID:  id.String(),
+		TraceID: traceIDFromContext(ctx),
+	}
+
+	_ = a.publisher.Publish(ctx, eventID.String(), event.UserSoftDeleted, payload)
 	return nil
 }
 
@@ -158,8 +180,8 @@ func (a aggregate) rollback(tx *gorm.DB) {
 
 func (a *aggregate) saveEvent(ctx context.Context, tx *gorm.DB, userID uuid.UUID, eventType string, payload interface{}) (uuid.UUID, error) {
 	if m, ok := payload.(map[string]string); ok {
-		if traceID, ok := ctx.Value("trace_id").(string); ok {
-			m["trace_id"] = traceID
+		if id, ok := ctx.Value(traceID).(string); ok {
+			m[traceID] = id
 		}
 		payload = m
 	}
@@ -177,4 +199,9 @@ func (a *aggregate) saveEvent(ctx context.Context, tx *gorm.DB, userID uuid.UUID
 		Payload:   data,
 	}
 	return eventID, tx.Create(&event).Error
+}
+
+func traceIDFromContext(ctx context.Context) string {
+	traceID, _ := ctx.Value(traceID).(string)
+	return traceID
 }
